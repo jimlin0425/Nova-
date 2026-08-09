@@ -84,7 +84,8 @@ def _clean_text_for_tts(text):
         return ""
 
     # 1. 移除括號內的動作或顏文字 (如 (•́ω•`) 或 (*笑*) )
-    text = re.sub(r'[（(][^）)]{1,20}[）)]', '', text)
+    text = re.sub(
+    r'[^\u4e00-\u9fff\sA-Za-z0-9，。！？、：；「」『』《》〈〉【】,.!?]', '', text)
     text = re.sub(r'[\*\`\#]', '', text)
 
     # 2. 標點轉換
