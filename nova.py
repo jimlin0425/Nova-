@@ -1,6 +1,5 @@
 import os
 import contextlib
-os.add_dll_directory(r"C:\ffmpeg\bin")
 import sys
 import warnings
 import re
@@ -13,6 +12,14 @@ import tkinter as tk
 
 warnings.filterwarnings("ignore")
 
+try:
+    import config
+except ImportError:
+    print("❌ 找不到 config.py。請複製 config.example.py 為 config.py，並填入你自己的路徑。")
+    sys.exit(1)
+
+os.add_dll_directory(config.FFMPEG_DLL_DIR)
+
 import speech_recognition as sr
 from faster_whisper import WhisperModel
 import pygame
@@ -23,20 +30,15 @@ import nova_memory as memory
 # --- 設定 ---
 WAKE_WORD    = "hey nova"
 
-# --- GPT-SoVITS API 設定 ---
-GPT_SOVITS_URL   = "http://127.0.0.1:9880"
-# 參考音檔（Reference audio）與其對應的逐字稿，兩者必須完全match，
-# 音質與情緒會直接影響合成結果，換聲音就是換這兩個值。
-REF_AUDIO_PATH   = r"C:\Users\jimli\Downloads\GPT-SoVITS-v2pro-20250604\GPT-SoVITS-v2pro-20250604\output\slicer_opt\mix_1m23s (audio-joiner.com).wav_0002401920_0002526720.wav"
-REF_PROMPT_TEXT  = "技術，一切都在飛速進化。Nova"
-REF_PROMPT_LANG  = "zh"       # 參考音檔的語言："zh" / "en" / "auto" 等
-TEXT_LANG        = "zh"       # 要合成文字的語言，中英夾雜可以先試 "zh"，效果不理想再試 "auto"
+# --- GPT-SoVITS API 設定（機密路徑統一從 config.py 讀取，不寫死在這裡） ---
+GPT_SOVITS_URL       = config.GPT_SOVITS_URL
+REF_AUDIO_PATH       = config.REF_AUDIO_PATH
+REF_PROMPT_TEXT      = config.REF_PROMPT_TEXT
+REF_PROMPT_LANG      = config.REF_PROMPT_LANG
+TEXT_LANG            = config.TEXT_LANG
+GPT_WEIGHTS_PATH     = config.GPT_WEIGHTS_PATH
+SOVITS_WEIGHTS_PATH  = config.SOVITS_WEIGHTS_PATH
 GPT_SOVITS_FALLBACK_SR = 32000  # v2pro 預設輸出取樣率，失敗時拿來寫靜音檔用
-
-# Ann 這個聲音模型的權重路徑，nova.py 啟動時會自動呼叫 API 切過去，
-# 不用每次重開 API 伺服器都手動在瀏覽器貼一次 set_gpt_weights / set_sovits_weights
-GPT_WEIGHTS_PATH   = r"C:\Users\jimli\Downloads\GPT-SoVITS-v2pro-20250604\GPT-SoVITS-v2pro-20250604\GPT_weights_v2ProPlus\Ann-e15.ckpt"
-SOVITS_WEIGHTS_PATH = r"C:\Users\jimli\Downloads\GPT-SoVITS-v2pro-20250604\GPT-SoVITS-v2pro-20250604\SoVITS_weights_v2ProPlus\Ann_e8_s184.pth"
 
 # 對應 WebUI「推理設置」裡調過的那組參數，讓 API 合成結果跟你測試時聽到的一致
 GPT_SOVITS_PARAMS = {
