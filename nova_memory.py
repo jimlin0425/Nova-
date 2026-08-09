@@ -27,6 +27,8 @@ OLLAMA_URL = "http://localhost:11434/api/generate"
 SUMMARY_MODEL = "nova"          # 用同一顆模型做摘要 / 事實萃取即可
 SUMMARIZE_EVERY_N_TURNS = 16    # 每累積 N 句（使用者+Nova 合計）就觸發一次摘要+事實萃取
 RECENT_TURNS_FOR_CONTEXT = 6    # 每次組 context 時，塞多少句「最近逐字對話」
+RECENT_TURNS_TIME_WINDOW_HOURS = 2   # 超過這麼久沒對話，就不把「最近對話」塞進 context，
+                                      # 避免隔了一段時間之後重啟，舊 session 的內容誤當成剛發生的事
 
 
 # ---------------------------------------------------------------------------
@@ -80,12 +82,18 @@ def save_turn(role, content):
     conn.close()
 
 
-def get_recent_turns(limit=RECENT_TURNS_FOR_CONTEXT):
+def get_recent_turns(limit=RECENT_TURNS_FOR_CONTEXT, time_window_hours=RECENT_TURNS_TIME_WINDOW_HOURS):
+    """抓最近的逐字對話塞進 context。
+    只抓 time_window_hours 小時內的，避免隔了一段時間才重啟 nova.py 時，
+    把很久以前（例如昨天、前幾天）的對話內容誤當成「剛剛發生的事」注入這一輪。"""
+    cutoff = (
+        datetime.datetime.now() - datetime.timedelta(hours=time_window_hours)
+    ).isoformat(timespec="seconds")
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute(
-        "SELECT role, content FROM conversations ORDER BY id DESC LIMIT ?",
-        (limit,),
+        "SELECT role, content FROM conversations WHERE timestamp >= ? ORDER BY id DESC LIMIT ?",
+        (cutoff, limit),
     )
     rows = c.fetchall()
     conn.close()
@@ -179,6 +187,16 @@ def get_latest_summary():
     row = c.fetchone()
     conn.close()
     return row[0] if row else ""
+
+
+def clear_all_summaries():
+    """清空所有摘要記錄（保留事實與逐字對話存檔）。
+    用在摘要內容過期、跑偏、或包含錯誤資訊時，重新歸零讓它從下次對話重新累積。"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM summaries")
+    conn.commit()
+    conn.close()
 
 
 def _count_unsummarized_turns():
@@ -377,6 +395,14 @@ if __name__ == "__main__":
     parser.add_argument("--list-facts", action="store_true", help="列出目前記住的所有事實")
     parser.add_argument("--forget-fact", metavar="KEY", help="刪除某一筆事實記憶，例如 --forget-fact job")
     parser.add_argument(
+        "--forget-summary", action="store_true",
+        help="清空所有摘要記錄（保留事實與逐字對話存檔），摘要跑偏或包含過期資訊時用這個"
+    )
+    parser.add_argument(
+        "--show-summary", action="store_true",
+        help="顯示目前的摘要內容，方便確認摘要是否已清空、或是不是又跑偏了"
+    )
+    parser.add_argument(
         "--wipe-conversations", action="store_true",
         help="只清空逐字對話存檔，保留事實與摘要"
     )
@@ -399,6 +425,14 @@ if __name__ == "__main__":
     elif args.forget_fact:
         delete_user_fact(args.forget_fact)
         print(f"✅ 已刪除事實：{args.forget_fact}")
+
+    elif args.forget_summary:
+        clear_all_summaries()
+        print("✅ 摘要已清空（事實與逐字對話存檔都還在）。")
+
+    elif args.show_summary:
+        s = get_latest_summary()
+        print(s if s else "目前沒有摘要。")
 
     elif args.wipe_conversations:
         confirm = input("⚠️ 這會清空所有逐字對話存檔（事實與摘要會保留），確定嗎？輸入 yes 確認：")
