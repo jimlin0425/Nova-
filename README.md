@@ -1,6 +1,6 @@
 # Nova — 本地端語音 AI 助理
 
-Nova 是一個完全在本機運行、離線的語音 AI 助理。
+Nova 是一個完全在本機運行、離線的語音 AI 助理，靈感來自鋼鐵人的 Jarvis。
 
 ## 架構
 
@@ -11,6 +11,12 @@ Nova 是一個完全在本機運行、離線的語音 AI 助理。
 | 嘴巴（TTS） | [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) v2Pro，透過本地 API 呼叫 |
 | 記憶 | `nova_memory.py`：SQLite 三層記憶（逐字對話 / 使用者事實 / 摘要） |
 | 介面 | Tkinter 打字輸入視窗 + Pygame 播放語音 |
+
+## 前置需求
+
+- **作業系統**：Windows
+- **GPU**：需要 NVIDIA 顯示卡，並裝好對應版本的驅動程式與 CUDA / cuDNN（Faster-Whisper 靠這個跑 CUDA 加速）。VRAM 建議 8GB 以上；若同時要跑 LLM（Ollama）、兩個 Whisper 模型、GPT-SoVITS，8GB 屬於偏緊的配置，第一次啟動或對話時反應可能較慢（見下方「已知限制」）。
+- **Python**：建議 3.12，用 venv 或 conda 建立獨立環境
 
 ## 安裝
 
@@ -55,6 +61,11 @@ cp config.example.py config.py
    ```
 
 啟動後對麥克風說 **"Hey Nova"** 喚醒，開始對話。
+
+## 已知限制
+
+- **TTS 合成偶爾偏慢（第一句話尤其明顯）**：若你的 GPU VRAM 較吃緊（例如 8GB），Ollama、Faster-Whisper、GPT-SoVITS 同時載入模型時可能發生資源競爭，合成速度會變慢。這不代表設定錯誤，屬於已知的效能待優化項目。
+- **LLM 偶爾會用英文回覆**，而非 `Modelfile` 設定的繁體中文，原因尚在排查中。
 
 ## ⚠️ 隱私與安全注意事項
 
