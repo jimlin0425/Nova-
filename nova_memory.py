@@ -109,6 +109,45 @@ def get_all_turns():
     return rows
 
 
+def list_conversations(limit=20):
+    """列出最近 N 筆逐字對話，附上 id，方便對照要刪除哪幾筆。"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        "SELECT id, timestamp, role, content FROM conversations ORDER BY id DESC LIMIT ?",
+        (limit,),
+    )
+    rows = c.fetchall()
+    conn.close()
+    return list(reversed(rows))  # 轉回時間正序，比較好對照前後文
+
+
+def search_conversations(keyword, limit=20):
+    """用關鍵字搜尋逐字對話內容，附上 id，方便定位要刪除的那幾筆。"""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        "SELECT id, timestamp, role, content FROM conversations WHERE content LIKE ? ORDER BY id DESC LIMIT ?",
+        (f"%{keyword}%", limit),
+    )
+    rows = c.fetchall()
+    conn.close()
+    return list(reversed(rows))
+
+
+def delete_conversation_turns(ids):
+    """刪除指定 id 的逐字對話紀錄（可傳多個 id）。回傳實際刪除的筆數。"""
+    if not ids:
+        return 0
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.executemany("DELETE FROM conversations WHERE id = ?", [(i,) for i in ids])
+    deleted = c.rowcount if c.rowcount is not None else 0
+    conn.commit()
+    conn.close()
+    return deleted
+
+
 # ---------------------------------------------------------------------------
 # 使用者事實（長期記憶）
 # ---------------------------------------------------------------------------
@@ -410,6 +449,21 @@ if __name__ == "__main__":
         "--wipe-all", action="store_true",
         help="清空『所有』記憶（事實、摘要、對話存檔），無法復原"
     )
+    
+    # 新增的三個指令
+    parser.add_argument(
+        "--list-turns", type=int, nargs='?', const=20, metavar="N",
+        help="列出最近 N 筆對話附帶 ID（預設 20 筆），方便定位要刪除的內容"
+    )
+    parser.add_argument(
+        "--search-turns", metavar="KEYWORD",
+        help="用關鍵字搜尋對話並顯示 ID"
+    )
+    parser.add_argument(
+        "--delete-turns", type=int, nargs='+', metavar="ID",
+        help="刪除指定 ID 的對話，可傳入多個 ID，例如 --delete-turns 10 11 15"
+    )
+    
     args = parser.parse_args()
 
     init_db()
@@ -452,6 +506,31 @@ if __name__ == "__main__":
             print("✅ 所有記憶已清空，Nova 現在等於是全新的狀態。")
         else:
             print("已取消，沒有任何變更。")
+
+    # 處理新增的三個指令邏輯
+    elif args.list_turns is not None:
+        turns = list_conversations(limit=args.list_turns)
+        if not turns:
+            print("目前沒有任何對話紀錄。")
+        else:
+            print(f"🔍 以下是最近 {args.list_turns} 筆對話：")
+            for tid, ts, role, content in turns:
+                speaker = "Jim" if role == "user" else "Nova"
+                print(f"[{tid}] {ts} {speaker}: {content[:100]}{'...' if len(content)>100 else ''}")
+
+    elif args.search_turns:
+        turns = search_conversations(args.search_turns, limit=50)
+        if not turns:
+            print(f"找不到包含「{args.search_turns}」的對話。")
+        else:
+            print(f"🔍 以下是包含「{args.search_turns}」的對話：")
+            for tid, ts, role, content in turns:
+                speaker = "Jim" if role == "user" else "Nova"
+                print(f"[{tid}] {ts} {speaker}: {content[:100]}{'...' if len(content)>100 else ''}")
+
+    elif args.delete_turns:
+        deleted = delete_conversation_turns(args.delete_turns)
+        print(f"✅ 已成功刪除 {deleted} 筆對話紀錄。")
 
     else:
         path = export_full_memory()
