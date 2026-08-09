@@ -1,0 +1,36 @@
+# --- 私人設定，絕對不要上傳 ---
+config.py
+
+# --- 記憶資料庫 / 匯出檔（含個人對話內容） ---
+nova_memory.db
+nova_memory_export.json
+
+# --- 語音模型檔案（TTS/喚醒詞用的權重，不適合上傳） ---
+*.onnx
+*.onnx.json
+
+# --- 執行期產生的暫存音檔 ---
+cache/
+*.wav
+temp.wav
+_interrupt.wav
+_tts_*.wav
+
+# --- 其他執行期產生的暫存/未知用途檔案 ---
+reply_text.txt
+
+# --- GPT-SoVITS 本體（太大，且含聲音模型不適合公開） ---
+GPT-SoVITS*/
+
+# --- Python ---
+__pycache__/
+*.pyc
+venv/
+.venv/
+nova_312/
+*.egg-info/
+
+# --- 編輯器 / 系統雜項 ---
+.vscode/
+.DS_Store
+Thumbs.db

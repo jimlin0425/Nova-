@@ -1,0 +1,5 @@
+SpeechRecognition
+faster-whisper
+pygame
+requests
+PyAudio
