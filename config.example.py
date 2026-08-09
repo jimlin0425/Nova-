@@ -1,18 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-config.example.py
-
-這是設定檔範本。使用方式：
-1. 複製這個檔案，改名為 config.py（跟 nova.py 放同一層）
-2. 把下面的路徑換成你自己電腦上的實際路徑
-3. config.py 已經被 .gitignore 排除，不會被上傳到 GitHub，放心填真實路徑
-
-⚠️ 不要把改好的 config.py 上傳到公開的 GitHub repo：
-   - REF_AUDIO_PATH 等路徑會透露你的資料夾結構跟使用者名稱
-   - 如果你用 GPT-SoVITS 複製了自己的聲音，模型權重與參考音檔本身
-     等於是「你的聲音」，公開分享有被拿去冒充你聲音的風險
-"""
-
 # --- ffmpeg 路徑（Windows 上 faster-whisper 需要用到） ---
 FFMPEG_DLL_DIR = r"C:\ffmpeg\bin"
 
